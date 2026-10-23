@@ -1,0 +1,17 @@
+# Core numerical and data libraries
+numpy>=1.26
+pandas>=2.0
+scipy>=1.10          # make_smoothing_spline, PchipInterpolator, Akima1DInterpolator
+matplotlib>=3.7
+scikit-learn>=1.4    # root_mean_squared_error, TimeSeriesSplit, regressors
+
+# Notebooks
+jupyter>=1.0
+
+# Testing and documentation
+pytest>=8.0
+pdoc>=14.0
+
+# Profiling (Week 2.1)
+line_profiler>=4.1
+scalene>=1.5

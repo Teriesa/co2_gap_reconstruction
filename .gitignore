@@ -1,0 +1,24 @@
+# Raw data is too large for GitHub (see README §4)
+data/raw/*
+!data/raw/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Profiler output
+*.lprof
+scalene-profile.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
