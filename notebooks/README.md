@@ -7,6 +7,6 @@ defining them inline, so the tested code and the analysis code are the same.
 | --- | --- | --- |
 | `00_setup_colab.ipynb` | Clone repo, install, link Drive data, run tests (run first in every Colab session) | 0 |
 | `01_data_audit.ipynb` | Load, parse, de-duplicate and audit the raw extract | 1 |
-| `02_gap_reconstruction.ipynb` | Masked-gap experiments for every method | 3–5 |
-| `03_validation_and_selection.ipynb` | Metrics by gap length, final test, apply to sensor …326 | 6 |
+| `02_gap_reconstruction.ipynb` | Masked-gap comparison of the interpolation methods on the development period | 3 |
+| `03_validation_and_selection.ipynb` | Regression baseline, final test, check on sensor …326, fill its real gaps | 4–6 |
 | `04_performance.ipynb` | Timing, profiling, FLOP / arithmetic-intensity estimates | 8 |

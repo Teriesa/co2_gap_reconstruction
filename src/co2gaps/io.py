@@ -26,8 +26,10 @@ LOCAL_TIMEZONE = "Australia/Melbourne"
 """Time zone of the building; all timestamps are converted to it."""
 
 CO2_VALID_RANGE_PPM = (350.0, 5000.0)
-"""Physically plausible indoor CO₂ range (ppm). Outdoor air is about 420 ppm, so
-readings below 350 ppm indicate a sensor fault; 5000 ppm is the sensor's upper limit."""
+"""Plausibility limits for indoor CO₂ (ppm), chosen for this project. Outdoor air is
+about 420 ppm and indoor levels cannot fall below it, so readings under 350 ppm indicate
+a sensor fault. 5000 ppm is a generous upper plausibility limit, well above any value in
+the data; it is not the sensor's specified range."""
 
 NOMINAL_INTERVAL_S = 600
 """Nominal sampling interval of the environmental sensors (10 minutes)."""
