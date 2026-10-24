@@ -27,7 +27,7 @@ method to use for which gap length.
 | --- | --- | --- |
 | Data audit | Duplicate removal, coverage, validity and rate-of-change rules | Weeks 5.6, 7.1 |
 | Main candidates | Linear, PCHIP, Akima and cubic-spline interpolation | Weeks 3.1, 3.4 |
-| Long-gap alternative | Regression on time-of-day / weekday features | Week 5 |
+| Baselines and improved method | Mean (`DummyRegressor`), typical-day profile, and typical day + interpolated anomaly | Week 5 |
 | Physics alternative (tested) | Calibrated single-zone CO₂ ODE, Euler/RK4 | Weeks 7.2–7.4 |
 | Evaluation | Masked-gap validation against known values; time-ordered split | Weeks 5.5, 5.6 |
 | Performance | `%timeit`, line_profiler, Scalene, FLOP / arithmetic-intensity estimates | Week 2.1 |
@@ -44,6 +44,7 @@ co2-gap-reconstruction/
 ├── src/co2gaps/         ← source package (all reusable functions)
 │   ├── io.py            ← load raw CSV, parse JSON, de-duplicate, audit
 │   ├── gaps.py          ← create masked gaps, reconstruction methods
+│   ├── baselines.py     ← regression baselines (mean, typical day, anomaly method)
 │   ├── evaluate.py      ← metrics and comparison tables
 │   └── perf.py          ← timing helpers
 ├── notebooks/           ← analysis notebooks, run in numbered order
