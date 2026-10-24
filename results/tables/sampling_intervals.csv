@@ -1,0 +1,9 @@
+,…869,…326
+total intervals,13799.0,29037.0
+exactly 600 s,9191.0,23505.0
+598-602 s,12347.0,26855.0
+normal (<= 15 min),12409.0,26894.0
+shortest normal (s),574.0,577.0
+longest normal (s),627.0,623.0
+15-30 min (1-2 readings missed),1390.0,2082.0
+> 30 min,0.0,61.0

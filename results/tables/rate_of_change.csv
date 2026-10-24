@@ -1,0 +1,6 @@
+,…869,…326
+median |dC/dt| (ppm/h),27.0,21.0
+99th percentile (ppm/h),116.0,252.0
+maximum (ppm/h),360.0,2841.0
+readings > 500 ppm/h,0.0,92.0
+readings > 1000 ppm/h,0.0,16.0
