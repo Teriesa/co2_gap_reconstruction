@@ -185,3 +185,57 @@ def test_compare_methods_accepts_extra_estimators():
     results = evaluate.compare_methods(series, [2], n_gaps=3, seed=0, methods=("linear",),
                                        estimators=constant)
     assert set(results["method"]) == {"linear", "constant_450"}
+
+
+def test_fill_gaps_by_rule_uses_the_chosen_method_per_gap():
+    """Short gaps get one method and long gaps another, as the rule says."""
+    series = _daily_wave(8)
+    hole_1h = (series.index >= START + pd.Timedelta(days=2)) & \
+              (series.index < START + pd.Timedelta(days=2, hours=1))
+    hole_10h = (series.index >= START + pd.Timedelta(days=4)) & \
+               (series.index < START + pd.Timedelta(days=4, hours=10))
+    with_gaps = series[~hole_1h & ~hole_10h]
+    from co2gaps import io
+    constant = lambda known, query: np.full(len(query), 500.0)
+    linear = lambda known, query: gaps.interpolate_gap(known, query, "linear")
+    rule = lambda missing_h: ("linear", linear) if missing_h <= 6 else ("constant", constant)
+    filled, report = gaps.fill_gaps_by_rule(with_gaps, io.find_gaps(with_gaps), rule)
+    assert report["method"].tolist() == ["linear", "constant"]
+    assert report["missing_h"].tolist() == [1.0, 10.0]
+    assert (filled.loc[filled["method"] == "constant", "co2_ppm"] == 500.0).all()
+    assert filled["filled"].sum() == 6 + 60
+
+
+def test_selection_and_rule():
+    """The selection picks the lowest median RMSE; the rule maps gap length to it."""
+    results = pd.DataFrame({
+        "gap_h": [1, 1, 1, 1, 24, 24, 24, 24],
+        "method": ["a", "a", "b", "b", "a", "a", "b", "b"],
+        "rmse": [5.0, 7.0, 9.0, 9.0, 40.0, 50.0, 20.0, 30.0],
+    })
+    selection = evaluate.select_by_gap_length(results)
+    assert selection.to_dict() == {1: "a", 24: "b"}
+    rule = evaluate.rule_from_selection(selection, {"a": "fa", "b": "fb"})
+    assert rule(0.5) == ("a", "fa")       # shorter than 1 h  -> 1 h choice
+    assert rule(1.0) == ("a", "fa")
+    assert rule(3.0) == ("b", "fb")       # between 1 h and 24 h -> 24 h choice
+    assert rule(30.0) == ("b", "fb")      # beyond the longest tested length
+
+
+def test_masked_gaps_never_touch_a_real_gap():
+    """No real gap may overlap a window or its context, even one starting just after it."""
+    series = _daily_wave(12)
+    for day in (3, 6, 9):                                       # three real 5 h gaps
+        hole = (series.index >= START + pd.Timedelta(days=day)) & \
+               (series.index < START + pd.Timedelta(days=day, hours=5))
+        series = series[~hole]
+    context = pd.Timedelta(hours=6)
+    real = series.index.to_series().diff() > pd.Timedelta(minutes=30)
+    real_starts = series.index[np.flatnonzero(real.to_numpy()) - 1]
+    real_ends = series.index[real.to_numpy()]
+    for gap_h in (3, 12):
+        windows = gaps.make_masked_gaps(series, gap_h=gap_h, n_gaps=60, seed=4, context_h=6)
+        assert len(windows) > 0
+        for start, end in windows.itertuples(index=False):
+            for g0, g1 in zip(real_starts, real_ends):
+                assert g1 <= start - context or g0 >= end + context

@@ -105,3 +105,51 @@ def summarise(results, statistic="median"):
     return {metric: results.pivot_table(index="method", columns="gap_h", values=metric,
                                         aggfunc=statistic)
             for metric in ("rmse", "mae", "overshoot")}
+
+
+def select_by_gap_length(results, metric="rmse"):
+    """Best method for each gap length: the lowest median of ``metric``.
+
+    Parameters
+    ----------
+    results : pandas.DataFrame
+        Output of :func:`compare_methods`.
+    metric : str
+        ``"rmse"`` (the project's selection rule) or ``"mae"``.
+
+    Returns
+    -------
+    pandas.Series
+        Method name indexed by gap length (hours), sorted by gap length.
+    """
+    table = results.pivot_table(index="method", columns="gap_h", values=metric,
+                                aggfunc="median")
+    return table.idxmin().sort_index()
+
+
+def rule_from_selection(selection, estimators):
+    """Turn a per-gap-length selection into a rule for ``gaps.fill_gaps_by_rule``.
+
+    A real gap uses the method selected for the shortest tested length that is at least
+    as long as the gap (e.g. a 2 h gap uses the 3 h choice). Gaps longer than every
+    tested length use the longest one's choice.
+
+    Parameters
+    ----------
+    selection : pandas.Series
+        Output of :func:`select_by_gap_length` (method by gap length in hours).
+    estimators : dict
+        ``{name: estimator(known, query_times)}`` covering every selected name.
+
+    Returns
+    -------
+    callable
+        ``choose(missing_h) -> (name, estimator)``.
+    """
+    lengths = np.asarray(selection.index, dtype=float)
+
+    def choose(missing_h):
+        position = min(int(np.searchsorted(lengths, missing_h - 1e-9)), len(lengths) - 1)
+        name = selection.iloc[position]
+        return name, estimators[name]
+    return choose

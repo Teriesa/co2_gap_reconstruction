@@ -45,6 +45,7 @@ co2-gap-reconstruction/
 │   ├── io.py            ← load raw CSV, parse JSON, de-duplicate, audit
 │   ├── gaps.py          ← create masked gaps, reconstruction methods
 │   ├── baselines.py     ← regression baselines (mean, typical day, anomaly method)
+│   ├── ode.py           ← CO₂ mass-balance ODE: calibration, Euler/RK4, gap filling
 │   ├── evaluate.py      ← metrics and comparison tables
 │   └── perf.py          ← timing helpers
 ├── notebooks/           ← analysis notebooks, run in numbered order

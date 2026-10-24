@@ -126,7 +126,9 @@ def make_masked_gaps(series, gap_h, n_gaps, seed=0, context_h=CONTEXT_H,
         if lo_t < t[0] or hi_t > t[-1]:
             continue                                   # window + context must fit
         lo, hi = np.searchsorted(t, lo_t), np.searchsorted(t, hi_t, side="right") - 1
-        if bad[hi] - bad[lo] > 0:
+        # Intervals lo-1 ... hi touch [lo_t, hi_t] (the first and last ones cross its
+        # ends), so all of them must be short.
+        if bad[min(hi + 1, len(t) - 1)] - bad[max(lo - 1, 0)] > 0:
             continue                                   # a real gap is too close
         start_t, end_t = t[i0], t[i0] + gap_h
         if any(start_t < e and s < end_t for s, e, _ in chosen):
@@ -243,8 +245,66 @@ def missing_slots(gap_start, gap_end, interval_min=SAMPLE_INTERVAL_MIN):
     return pd.DatetimeIndex([gap_start + k * step for k in range(1, max(n, 0) + 1)])
 
 
+def fill_gaps_by_rule(series, gaps, choose, max_gap_h=MAX_FILL_GAP_H):
+    """Fill real gaps, choosing the method for each gap from its length.
+
+    Parameters
+    ----------
+    series : pandas.Series
+        Time-indexed readings with real gaps.
+    gaps : pandas.DataFrame
+        Gaps as returned by ``co2gaps.io.find_gaps`` (columns ``start`` and ``end``).
+    choose : callable
+        ``choose(missing_h) -> (name, estimator)``, where ``missing_h`` is the hours of
+        missing readings and ``estimator(known, query_times)`` returns the estimates.
+    max_gap_h : float
+        Gaps with more missing hours than this are left empty (see
+        :data:`MAX_FILL_GAP_H`).
+
+    Returns
+    -------
+    filled : pandas.DataFrame
+        Columns ``co2_ppm``, ``filled`` (True for reconstructed values) and ``method``
+        (empty string for measured values), indexed by time and sorted.
+    report : pandas.DataFrame
+        ``gaps`` plus ``missing_h``, ``status`` (``"filled"`` or ``"too long"``),
+        ``method`` and ``n_filled``.
+    """
+    new_times, new_values, new_methods = [], [], []
+    missing, status, used, n_filled = [], [], [], []
+    for gap in gaps.itertuples():
+        missing_h = _missing_hours(gap.start, gap.end)
+        missing.append(missing_h)
+        if missing_h > max_gap_h:
+            status.append("too long")
+            used.append("")
+            n_filled.append(0)
+            continue
+        slots = missing_slots(gap.start, gap.end)
+        name, estimator = choose(missing_h)
+        values = estimator(series, slots)
+        new_times.extend(slots)
+        new_values.extend(values)
+        new_methods.extend([name] * len(slots))
+        status.append("filled")
+        used.append(name)
+        n_filled.append(len(slots))
+
+    original = pd.DataFrame({"co2_ppm": series.to_numpy(dtype=float), "filled": False,
+                             "method": ""}, index=series.index)
+    added = pd.DataFrame({"co2_ppm": new_values, "filled": True, "method": new_methods},
+                         index=pd.DatetimeIndex(new_times, tz=series.index.tz))
+    filled = pd.concat([original, added]).sort_index()
+    report = gaps.copy()
+    report["missing_h"] = missing
+    report["status"] = status
+    report["method"] = used
+    report["n_filled"] = n_filled
+    return filled, report
+
+
 def fill_gaps(series, method, gaps, max_gap_h=MAX_FILL_GAP_H, context_h=CONTEXT_H):
-    """Fill real gaps up to ``max_gap_h`` and report what was done with each gap.
+    """Fill real gaps up to ``max_gap_h`` with one interpolation method.
 
     Parameters
     ----------
@@ -253,39 +313,15 @@ def fill_gaps(series, method, gaps, max_gap_h=MAX_FILL_GAP_H, context_h=CONTEXT_
     method : str
         One of :data:`METHODS`.
     gaps : pandas.DataFrame
-        Gaps as returned by ``co2gaps.io.find_gaps`` (columns ``start``, ``end``,
-        ``duration_h``).
+        Gaps as returned by ``co2gaps.io.find_gaps``.
     max_gap_h, context_h : float
         See :data:`MAX_FILL_GAP_H` and :data:`CONTEXT_H`.
 
     Returns
     -------
-    filled : pandas.DataFrame
-        Columns ``co2_ppm`` and ``filled`` (True for reconstructed values), indexed by
-        time and sorted.
-    report : pandas.DataFrame
-        ``gaps`` with two extra columns: ``status`` (``"filled"`` or ``"too long"``)
-        and ``n_filled``.
+    filled, report : pandas.DataFrame
+        As for :func:`fill_gaps_by_rule`.
     """
-    new_times, new_values, status, n_filled = [], [], [], []
-    for gap in gaps.itertuples():
-        if _missing_hours(gap.start, gap.end) > max_gap_h:
-            status.append("too long")
-            n_filled.append(0)
-            continue
-        slots = missing_slots(gap.start, gap.end)
-        values = interpolate_gap(series, slots, method, context_h, max_gap_h)
-        new_times.extend(slots)
-        new_values.extend(values)
-        status.append("filled")
-        n_filled.append(len(slots))
-
-    original = pd.DataFrame({"co2_ppm": series.to_numpy(dtype=float), "filled": False},
-                            index=series.index)
-    added = pd.DataFrame({"co2_ppm": new_values, "filled": True},
-                         index=pd.DatetimeIndex(new_times, tz=series.index.tz))
-    filled = pd.concat([original, added]).sort_index()
-    report = gaps.copy()
-    report["status"] = status
-    report["n_filled"] = n_filled
-    return filled, report
+    def estimator(known, query_times):
+        return interpolate_gap(known, query_times, method, context_h, max_gap_h)
+    return fill_gaps_by_rule(series, gaps, lambda missing_h: (method, estimator), max_gap_h)
