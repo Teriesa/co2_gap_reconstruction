@@ -72,6 +72,27 @@ def load_raw(path, nrows=None):
     return raw
 
 
+def drop_repeated_uploads(raw):
+    """Drop raw rows whose sensor and ``jsondata`` text exactly repeat an earlier row.
+
+    About three quarters of the raw rows are repeated uploads. Dropping them before
+    parsing gives exactly the same de-duplicated readings (checked in
+    ``tests/test_io.py``), but avoids parsing the same JSON text many times; this is the
+    main performance optimisation of the pipeline (notebook 06).
+
+    Parameters
+    ----------
+    raw : pandas.DataFrame
+        Output of :func:`load_raw`.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The raw table without repeated rows (first copy kept).
+    """
+    return raw.drop_duplicates(subset=["sensorid", "jsondata"], keep="first")
+
+
 def parse_jsondata(raw, variables=(CO2_VARIABLE,)):
     """Expand the ``jsondata`` column into one row per reading.
 

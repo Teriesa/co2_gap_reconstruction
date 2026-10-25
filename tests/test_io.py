@@ -152,3 +152,12 @@ def test_audit_series_summary():
     assert summary["coverage"] == pytest.approx(0.8)
     assert summary["min_ppm"] == 450 and summary["max_ppm"] == 550
     assert summary["n_out_of_range"] == 0
+
+
+def test_drop_repeated_uploads_gives_identical_readings():
+    """Dropping repeated raw rows before parsing changes nothing after de-duplication."""
+    raw = _raw()
+    slow, _ = io.deduplicate(io.parse_jsondata(raw))
+    fast, _ = io.deduplicate(io.parse_jsondata(io.drop_repeated_uploads(raw)))
+    pd.testing.assert_frame_equal(slow, fast)
+    assert len(io.drop_repeated_uploads(raw)) == len(raw) - 1      # one repeated row
