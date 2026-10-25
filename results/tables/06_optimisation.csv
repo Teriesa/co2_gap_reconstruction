@@ -1,0 +1,3 @@
+,raw rows parsed,median time (s),raw table memory (MB)
+baseline (parse all rows),179447.0,3.8162352940000233,652.351425
+optimised (drop repeats first),42847.0,1.5568263200000274,157.137195

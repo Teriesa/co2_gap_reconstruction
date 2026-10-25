@@ -1,0 +1,3 @@
+,work,FLOPs,bytes,measured time (s),arithmetic intensity (FLOP/byte),achieved FLOP/s
+linear: fill all real gaps of …326,"2,433 slots",12165,38928,2.820520271000021,0.3125,4313.034061509112
+RK4: one 24 h gap,144 steps,4320,3456,0.0006288090000339253,1.25,6870130.675239905
